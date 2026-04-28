@@ -12,23 +12,21 @@
         <h1 class="mb-4">Slab Scanner</h1>
 
         <!-- Upload Section -->
-        <div class="row mb-5">
+        <div id="uploadSection" class="row mb-5">
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5>Front Photo</h5>
+                        <h5 class="mb-0">Front Photo</h5>
                     </div>
                     <div class="card-body">
                         <div id="frontDropZone" class="drop-zone">
-                            <p>Drag and drop front photo here</p>
-                            <input type="file" id="frontInput" accept="image/*" style="display:none;">
-                            <button class="btn btn-outline-primary" onclick="document.getElementById('frontInput').click()">
-                                Choose Image
-                            </button>
-                        </div>
-                        <div id="frontPreview" class="mt-3" style="display:none;">
-                            <img id="frontImage" src="" alt="Front" class="img-fluid">
-                            <button class="btn btn-sm btn-danger mt-2" onclick="clearImage('front')">Clear</button>
+                            <img id="frontImage" class="drop-zone-thumb" alt="Front preview">
+                            <div class="drop-zone-content">
+                                <p class="drop-zone-prompt">Drag and drop front photo here</p>
+                                <input type="file" id="frontInput" accept="image/*" style="display:none;">
+                                <button class="btn btn-outline-primary btn-sm" onclick="document.getElementById('frontInput').click()">Choose Image</button>
+                                <button class="btn btn-sm btn-link text-danger drop-zone-clear" onclick="clearImage('front')">Clear</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -37,19 +35,17 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5>Back Photo</h5>
+                        <h5 class="mb-0">Back Photo</h5>
                     </div>
                     <div class="card-body">
                         <div id="backDropZone" class="drop-zone">
-                            <p>Drag and drop back photo here</p>
-                            <input type="file" id="backInput" accept="image/*" style="display:none;">
-                            <button class="btn btn-outline-primary" onclick="document.getElementById('backInput').click()">
-                                Choose Image
-                            </button>
-                        </div>
-                        <div id="backPreview" class="mt-3" style="display:none;">
-                            <img id="backImage" src="" alt="Back" class="img-fluid">
-                            <button class="btn btn-sm btn-danger mt-2" onclick="clearImage('back')">Clear</button>
+                            <img id="backImage" class="drop-zone-thumb" alt="Back preview">
+                            <div class="drop-zone-content">
+                                <p class="drop-zone-prompt">Drag and drop back photo here</p>
+                                <input type="file" id="backInput" accept="image/*" style="display:none;">
+                                <button class="btn btn-outline-primary btn-sm" onclick="document.getElementById('backInput').click()">Choose Image</button>
+                                <button class="btn btn-sm btn-link text-danger drop-zone-clear" onclick="clearImage('back')">Clear</button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -68,10 +68,7 @@ function handleImageUpload(file, side) {
             state[side].quad = null;
             displayPreview(side, img);
             renderCanvas(side);
-            if (state.front.image && state.back.image) {
-                document.getElementById('processingSection').style.display = 'block';
-                document.getElementById('exportSection').style.display = 'block';
-            }
+            updateLayout();
         };
         img.src = e.target.result;
     };
@@ -79,8 +76,15 @@ function handleImageUpload(file, side) {
 }
 
 function displayPreview(side, img) {
-    document.getElementById(`${side}Preview`).style.display = 'block';
+    document.getElementById(`${side}DropZone`).classList.add('has-image');
     document.getElementById(`${side}Image`).src = img.src;
+}
+
+function updateLayout() {
+    const bothLoaded = state.front.image && state.back.image;
+    document.getElementById('uploadSection').classList.toggle('compact', bothLoaded);
+    document.getElementById('processingSection').style.display = bothLoaded ? 'block' : 'none';
+    document.getElementById('exportSection').style.display = bothLoaded ? 'block' : 'none';
 }
 
 // ---------- Canvas interactions ----------
@@ -256,13 +260,11 @@ function clearImage(side) {
     state[side].image = null;
     state[side].quad = null;
     document.getElementById(`${side}Input`).value = '';
-    document.getElementById(`${side}Preview`).style.display = 'none';
+    document.getElementById(`${side}DropZone`).classList.remove('has-image');
+    document.getElementById(`${side}Image`).src = '';
     const canvas = document.getElementById(`${side}Canvas`);
     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-    if (!state.front.image || !state.back.image) {
-        document.getElementById('processingSection').style.display = 'none';
-        document.getElementById('exportSection').style.display = 'none';
-    }
+    updateLayout();
 }
 
 // ---------- Export ----------

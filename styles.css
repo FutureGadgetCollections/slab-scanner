@@ -17,12 +17,13 @@ h1 {
     text-align: center;
     background-color: #f0f7ff;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: padding 0.2s ease, min-height 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
     min-height: 120px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    gap: 12px;
 }
 
 .drop-zone:hover {
@@ -36,14 +37,54 @@ h1 {
     color: white;
 }
 
-.drop-zone p {
-    margin: 0 0 15px 0;
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.drop-zone-prompt {
+    margin: 0;
     color: #666;
 }
 
-.drop-zone.drag-over p {
+.drop-zone.drag-over .drop-zone-prompt {
     color: white;
 }
+
+.drop-zone-thumb {
+    display: none;
+    max-height: 140px;
+    max-width: 100%;
+    border-radius: 4px;
+    object-fit: contain;
+}
+
+.drop-zone-clear {
+    display: none;
+    padding: 0;
+    font-size: 0.85rem;
+}
+
+.drop-zone.has-image .drop-zone-thumb { display: block; }
+.drop-zone.has-image .drop-zone-prompt { display: none; }
+.drop-zone.has-image .drop-zone-clear { display: inline-block; }
+
+/* Compact mode: both photos uploaded — collapse to a small strip */
+#uploadSection.compact { margin-bottom: 1rem !important; }
+#uploadSection.compact .card-header { padding: 4px 12px; }
+#uploadSection.compact .card-header h5 { font-size: 0.85rem; }
+#uploadSection.compact .card-body { padding: 6px 8px; }
+#uploadSection.compact .drop-zone {
+    padding: 6px 10px;
+    min-height: 0;
+    flex-direction: row;
+    gap: 10px;
+    text-align: left;
+}
+#uploadSection.compact .drop-zone-thumb { max-height: 56px; }
+#uploadSection.compact .drop-zone-content { flex-direction: row; gap: 6px; flex-wrap: wrap; }
 
 .canvas-container {
     border: 1px solid #dee2e6;
