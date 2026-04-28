@@ -8,6 +8,7 @@ let cvReady = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     setupDropZones();
+    setupCanvasReplaceDrops();
     setupFileInputs();
     ['front', 'back'].forEach(setupCanvasInteractions);
 
@@ -16,6 +17,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     cvReady = true;
     showStatus('Ready — upload a front and back photo, then draw rectangles.', 'success');
 });
+
+function setupCanvasReplaceDrops() {
+    ['front', 'back'].forEach(side => {
+        const container = document.getElementById(`${side}CanvasContainer`);
+        container.addEventListener('dragover', (e) => { e.preventDefault(); container.classList.add('drag-over'); });
+        container.addEventListener('dragleave', () => container.classList.remove('drag-over'));
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            container.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length) handleImageUpload(files[0], side);
+        });
+    });
+}
 
 function waitForOpenCV() {
     return new Promise((resolve) => {
@@ -82,7 +97,7 @@ function displayPreview(side, img) {
 
 function updateLayout() {
     const bothLoaded = state.front.image && state.back.image;
-    document.getElementById('uploadSection').classList.toggle('compact', bothLoaded);
+    document.getElementById('uploadSection').style.display = bothLoaded ? 'none' : '';
     document.getElementById('processingSection').style.display = bothLoaded ? 'block' : 'none';
     document.getElementById('exportSection').style.display = bothLoaded ? 'block' : 'none';
 }

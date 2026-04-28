@@ -71,20 +71,11 @@ h1 {
 .drop-zone.has-image .drop-zone-prompt { display: none; }
 .drop-zone.has-image .drop-zone-clear { display: inline-block; }
 
-/* Compact mode: both photos uploaded — collapse to a small strip */
-#uploadSection.compact { margin-bottom: 1rem !important; }
-#uploadSection.compact .card-header { padding: 4px 12px; }
-#uploadSection.compact .card-header h5 { font-size: 0.85rem; }
-#uploadSection.compact .card-body { padding: 6px 8px; }
-#uploadSection.compact .drop-zone {
-    padding: 6px 10px;
-    min-height: 0;
-    flex-direction: row;
-    gap: 10px;
-    text-align: left;
+/* Canvas containers act as drop targets for replacing the image */
+.canvas-container.drag-over {
+    border-color: #0056b3;
+    box-shadow: 0 0 0 2px #0056b3;
 }
-#uploadSection.compact .drop-zone-thumb { max-height: 56px; }
-#uploadSection.compact .drop-zone-content { flex-direction: row; gap: 6px; flex-wrap: wrap; }
 
 .canvas-container {
     border: 1px solid #dee2e6;

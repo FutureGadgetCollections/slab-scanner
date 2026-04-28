@@ -63,18 +63,22 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                     <h6 class="mb-0">Front</h6>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="clearQuad('front')">Clear rectangle</button>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('frontInput').click()">Change image</button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearQuad('front')">Clear rectangle</button>
+                                    </div>
                                 </div>
                                 <div id="frontCanvasContainer" class="canvas-container">
                                     <canvas id="frontCanvas"></canvas>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                     <h6 class="mb-0">Back</h6>
                                     <div>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('backInput').click()">Change image</button>
                                         <button class="btn btn-sm btn-outline-primary" onclick="copyQuadFromFront()">Copy from front</button>
                                         <button class="btn btn-sm btn-outline-secondary" onclick="clearQuad('back')">Clear rectangle</button>
                                     </div>
