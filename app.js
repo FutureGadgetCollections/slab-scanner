@@ -1,20 +1,20 @@
-// State
-let frontImageData = null;
-let backImageData = null;
+// State per side
+// quad = [TL, TR, BR, BL] in image coords. null until user draws.
+const state = {
+    front: { image: null, quad: null, drawing: false, drawStart: null, dragIdx: null },
+    back:  { image: null, quad: null, drawing: false, drawStart: null, dragIdx: null }
+};
 let cvReady = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     setupDropZones();
     setupFileInputs();
+    ['front', 'back'].forEach(setupCanvasInteractions);
 
-    showStatus('Loading detection engine...', 'info');
+    showStatus('Loading export engine...', 'info');
     await waitForOpenCV();
     cvReady = true;
-    showStatus('Detection engine ready', 'success');
-
-    // Process any image already uploaded while waiting
-    if (frontImageData && !frontImageData.boundingBox) processImage('front', frontImageData.image);
-    if (backImageData && !backImageData.boundingBox) processImage('back', backImageData.image);
+    showStatus('Ready — upload a front and back photo, then draw rectangles.', 'success');
 });
 
 function waitForOpenCV() {
@@ -22,11 +22,9 @@ function waitForOpenCV() {
         const check = () => {
             if (window.cv && typeof window.cv.Mat === 'function') return resolve();
             if (window.__cvReady && window.cv) {
-                if (window.cv['onRuntimeInitialized']) {
-                    const prev = window.cv['onRuntimeInitialized'];
-                    window.cv['onRuntimeInitialized'] = () => { prev && prev(); resolve(); };
-                    return;
-                }
+                const prev = window.cv['onRuntimeInitialized'];
+                window.cv['onRuntimeInitialized'] = () => { prev && prev(); resolve(); };
+                return;
             }
             setTimeout(check, 100);
         };
@@ -62,17 +60,18 @@ function handleImageUpload(file, side) {
         showStatus('Please upload an image file', 'error');
         return;
     }
-
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            if (side === 'front') frontImageData = { file, image: img };
-            else backImageData = { file, image: img };
-
+            state[side].image = img;
+            state[side].quad = null;
             displayPreview(side, img);
-            if (cvReady) processImage(side, img);
-            else showStatus('Waiting for detection engine to finish loading...', 'info');
+            renderCanvas(side);
+            if (state.front.image && state.back.image) {
+                document.getElementById('processingSection').style.display = 'block';
+                document.getElementById('exportSection').style.display = 'block';
+            }
         };
         img.src = e.target.result;
     };
@@ -84,188 +83,239 @@ function displayPreview(side, img) {
     document.getElementById(`${side}Image`).src = img.src;
 }
 
-function processImage(side, img) {
-    try {
-        const bbox = detectCardBoundingBox(img);
-        const imageData = side === 'front' ? frontImageData : backImageData;
-        imageData.detectedBox = bbox;
-        drawCardOutline(side);
+// ---------- Canvas interactions ----------
 
-        if (bbox.detected) {
-            showStatus(`${cap(side)} card detected`, 'success');
-        } else {
-            showStatus(`No clear card outline in ${side} image — using full frame. Adjust buffer or recrop manually.`, 'info');
-        }
-    } catch (error) {
-        console.error(`Error processing ${side} image:`, error);
-        showStatus(`Error processing ${side} image`, 'error');
-    }
-
-    if (frontImageData && backImageData) {
-        document.getElementById('processingSection').style.display = 'block';
-        document.getElementById('exportSection').style.display = 'block';
-    }
-}
-
-// Edge + contour based card detection. Returns {x,y,width,height,detected}.
-function detectCardBoundingBox(img) {
-    const cv = window.cv;
-    const W = img.width, H = img.height;
-
-    // Downscale very large images for speed; we'll scale the bbox back up.
-    const maxDim = 1200;
-    const scale = Math.min(1, maxDim / Math.max(W, H));
-    const work = document.createElement('canvas');
-    work.width = Math.round(W * scale);
-    work.height = Math.round(H * scale);
-    work.getContext('2d').drawImage(img, 0, 0, work.width, work.height);
-
-    const src = cv.imread(work);
-    const gray = new cv.Mat();
-    const blurred = new cv.Mat();
-    const edges = new cv.Mat();
-    const dilated = new cv.Mat();
-    const contours = new cv.MatVector();
-    const hierarchy = new cv.Mat();
-    const kernel = cv.Mat.ones(5, 5, cv.CV_8U);
-
-    let result = { x: 0, y: 0, width: W, height: H, detected: false };
-
-    try {
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-        // Canny with auto-ish thresholds based on median would be ideal; fixed values work for typical photos.
-        cv.Canny(blurred, edges, 50, 150);
-        cv.dilate(edges, dilated, kernel);
-        cv.findContours(dilated, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-        const minArea = work.width * work.height * 0.05;
-        const maxArea = work.width * work.height * 0.98;
-        let best = null;
-        let bestScore = 0;
-
-        for (let i = 0; i < contours.size(); i++) {
-            const cnt = contours.get(i);
-            const area = cv.contourArea(cnt);
-            if (area < minArea || area > maxArea) { cnt.delete(); continue; }
-
-            const rect = cv.boundingRect(cnt);
-            const aspect = rect.width / rect.height;
-            // Cards (slabs) typically have aspect 0.6–0.85 portrait or 1.2–1.7 landscape.
-            const aspectScore = (aspect > 0.5 && aspect < 0.95) || (aspect > 1.05 && aspect < 2.0) ? 1 : 0.4;
-            // Rectangularity: contour area vs bounding rect area
-            const rectArea = rect.width * rect.height;
-            const fill = area / rectArea;
-            const score = area * aspectScore * fill;
-
-            if (score > bestScore) {
-                bestScore = score;
-                best = rect;
-            }
-            cnt.delete();
-        }
-
-        if (best) {
-            result = {
-                x: Math.round(best.x / scale),
-                y: Math.round(best.y / scale),
-                width: Math.round(best.width / scale),
-                height: Math.round(best.height / scale),
-                detected: true
-            };
-        }
-    } finally {
-        src.delete(); gray.delete(); blurred.delete(); edges.delete();
-        dilated.delete(); contours.delete(); hierarchy.delete(); kernel.delete();
-    }
-
-    return result;
-}
-
-function drawCardOutline(side) {
-    const imageData = side === 'front' ? frontImageData : backImageData;
-    if (!imageData || !imageData.detectedBox) return;
-
+function setupCanvasInteractions(side) {
     const canvas = document.getElementById(`${side}Canvas`);
-    const ctx = canvas.getContext('2d');
-    const bbox = imageData.detectedBox;
-
-    canvas.width = imageData.image.width;
-    canvas.height = imageData.image.height;
-    ctx.drawImage(imageData.image, 0, 0);
-
-    const buffer = parseInt(document.getElementById(`${side}Buffer`).value) || 0;
-    const x = Math.max(0, bbox.x - buffer);
-    const y = Math.max(0, bbox.y - buffer);
-    const w = Math.min(canvas.width - x, bbox.width + 2 * buffer);
-    const h = Math.min(canvas.height - y, bbox.height + 2 * buffer);
-
-    ctx.strokeStyle = bbox.detected ? '#00ff00' : '#ff8800';
-    ctx.lineWidth = Math.max(3, Math.round(canvas.width * 0.004));
-    ctx.strokeRect(x, y, w, h);
-
-    const cornerSize = Math.max(20, Math.round(canvas.width * 0.03));
-    const t = Math.max(3, Math.round(canvas.width * 0.005));
-    ctx.fillStyle = ctx.strokeStyle;
-    [[x, y], [x + w - cornerSize, y], [x, y + h - cornerSize], [x + w - cornerSize, y + h - cornerSize]].forEach(([cx, cy]) => {
-        ctx.fillRect(cx, cy, cornerSize, t);
-        ctx.fillRect(cx, cy, t, cornerSize);
-    });
-
-    imageData.boundingBox = { x, y, w, h };
+    canvas.addEventListener('mousedown', (e) => onPointerDown(side, e));
+    canvas.addEventListener('mousemove', (e) => onPointerMove(side, e));
+    window.addEventListener('mouseup', (e) => onPointerUp(side, e));
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); onPointerDown(side, e.touches[0]); }, { passive: false });
+    canvas.addEventListener('touchmove',  (e) => { e.preventDefault(); onPointerMove(side, e.touches[0]); }, { passive: false });
+    canvas.addEventListener('touchend',   (e) => { e.preventDefault(); onPointerUp(side, e.changedTouches[0]); }, { passive: false });
 }
 
-function reprocessImages() {
-    if (frontImageData && frontImageData.detectedBox) drawCardOutline('front');
-    if (backImageData && backImageData.detectedBox) drawCardOutline('back');
+function eventToImageCoords(canvas, e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - r.left) * (canvas.width / r.width),
+        y: (e.clientY - r.top) * (canvas.height / r.height)
+    };
+}
+
+function cornerHitRadius(canvas) {
+    return Math.max(20, canvas.width * 0.025);
+}
+
+function findCornerHit(quad, pt, radius) {
+    if (!quad) return -1;
+    let best = -1;
+    let bestDist = radius * radius;
+    for (let i = 0; i < 4; i++) {
+        const dx = quad[i].x - pt.x;
+        const dy = quad[i].y - pt.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 <= bestDist) { bestDist = d2; best = i; }
+    }
+    return best;
+}
+
+function onPointerDown(side, e) {
+    const s = state[side];
+    if (!s.image) return;
+    const canvas = document.getElementById(`${side}Canvas`);
+    const pt = eventToImageCoords(canvas, e);
+
+    if (s.quad) {
+        const idx = findCornerHit(s.quad, pt, cornerHitRadius(canvas));
+        if (idx >= 0) {
+            s.dragIdx = idx;
+            canvas.classList.add('dragging-corner');
+            return;
+        }
+        // Existing quad and click was outside any corner → no-op (use Clear button to start over)
+        return;
+    }
+
+    // No quad yet → begin drawing initial axis-aligned rect
+    s.drawing = true;
+    s.drawStart = pt;
+    s.quad = [{ ...pt }, { ...pt }, { ...pt }, { ...pt }];
+    renderCanvas(side);
+}
+
+function onPointerMove(side, e) {
+    const s = state[side];
+    if (!s.image) return;
+    const canvas = document.getElementById(`${side}Canvas`);
+    const pt = eventToImageCoords(canvas, e);
+
+    if (s.drawing) {
+        const x1 = s.drawStart.x, y1 = s.drawStart.y;
+        const x2 = pt.x, y2 = pt.y;
+        const xmin = Math.min(x1, x2), xmax = Math.max(x1, x2);
+        const ymin = Math.min(y1, y2), ymax = Math.max(y1, y2);
+        s.quad = [
+            { x: xmin, y: ymin }, // TL
+            { x: xmax, y: ymin }, // TR
+            { x: xmax, y: ymax }, // BR
+            { x: xmin, y: ymax }  // BL
+        ];
+        renderCanvas(side);
+    } else if (s.dragIdx !== null) {
+        // Clamp to image bounds
+        s.quad[s.dragIdx] = {
+            x: Math.max(0, Math.min(s.image.width, pt.x)),
+            y: Math.max(0, Math.min(s.image.height, pt.y))
+        };
+        renderCanvas(side);
+    }
+}
+
+function onPointerUp(side) {
+    const s = state[side];
+    const canvas = document.getElementById(`${side}Canvas`);
+    if (s.drawing) {
+        s.drawing = false;
+        s.drawStart = null;
+        // If the rect is too tiny (a misclick), discard it
+        const w = s.quad[1].x - s.quad[0].x;
+        const h = s.quad[3].y - s.quad[0].y;
+        if (w < 10 || h < 10) s.quad = null;
+        renderCanvas(side);
+    }
+    if (s.dragIdx !== null) {
+        s.dragIdx = null;
+        canvas.classList.remove('dragging-corner');
+    }
+}
+
+// ---------- Rendering ----------
+
+function renderCanvas(side) {
+    const s = state[side];
+    const canvas = document.getElementById(`${side}Canvas`);
+    if (!s.image) return;
+
+    canvas.width = s.image.width;
+    canvas.height = s.image.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(s.image, 0, 0);
+
+    if (!s.quad) return;
+
+    const lineWidth = Math.max(3, canvas.width * 0.004);
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.moveTo(s.quad[0].x, s.quad[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(s.quad[i].x, s.quad[i].y);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Corner handles
+    const r = Math.max(10, canvas.width * 0.012);
+    for (let i = 0; i < 4; i++) {
+        const c = s.quad[i];
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#00ff00';
+        ctx.fill();
+        ctx.lineWidth = lineWidth * 0.6;
+        ctx.strokeStyle = '#003300';
+        ctx.stroke();
+    }
+}
+
+// ---------- Quad management ----------
+
+function clearQuad(side) {
+    state[side].quad = null;
+    renderCanvas(side);
+}
+
+function copyQuadFromFront() {
+    if (!state.front.quad) {
+        showStatus('Draw a rectangle on the front photo first', 'error');
+        return;
+    }
+    if (!state.back.image) {
+        showStatus('Upload a back photo first', 'error');
+        return;
+    }
+    // Scale front quad coords to back image's coordinate space (in case dimensions differ)
+    const fW = state.front.image.width, fH = state.front.image.height;
+    const bW = state.back.image.width,  bH = state.back.image.height;
+    const sx = bW / fW, sy = bH / fH;
+    state.back.quad = state.front.quad.map(p => ({ x: p.x * sx, y: p.y * sy }));
+    renderCanvas('back');
+    showStatus('Copied front rectangle to back — drag corners to fine-tune', 'success');
 }
 
 function clearImage(side) {
-    if (side === 'front') {
-        frontImageData = null;
-        document.getElementById('frontInput').value = '';
-    } else {
-        backImageData = null;
-        document.getElementById('backInput').value = '';
-    }
-
+    state[side].image = null;
+    state[side].quad = null;
+    document.getElementById(`${side}Input`).value = '';
     document.getElementById(`${side}Preview`).style.display = 'none';
     const canvas = document.getElementById(`${side}Canvas`);
     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-
-    if (!frontImageData || !backImageData) {
+    if (!state.front.image || !state.back.image) {
         document.getElementById('processingSection').style.display = 'none';
         document.getElementById('exportSection').style.display = 'none';
     }
 }
 
+// ---------- Export ----------
+
 function exportImages() {
     const name = document.getElementById('exportName').value.trim();
     if (!name) { showStatus('Please enter a card name/ID', 'error'); return; }
-    if (!frontImageData?.boundingBox || !backImageData?.boundingBox) {
-        showStatus('Images not ready for export', 'error');
+    if (!state.front.quad || !state.back.quad) {
+        showStatus('Draw a rectangle on both front and back photos first', 'error');
         return;
     }
+    if (!cvReady) { showStatus('Export engine still loading, try again in a moment', 'error'); return; }
 
     try {
         showStatus('Exporting images...', 'info');
-        downloadImage(cropImage(frontImageData), `${name}_front.jpg`);
-        downloadImage(cropImage(backImageData), `${name}_back.jpg`);
+        downloadImage(warpQuadToCanvas(state.front), `${name}_front.jpg`);
+        downloadImage(warpQuadToCanvas(state.back),  `${name}_back.jpg`);
         showStatus(`Exported: ${name}_front.jpg and ${name}_back.jpg`, 'success');
-    } catch (error) {
-        console.error('Export error:', error);
+    } catch (err) {
+        console.error('Export error:', err);
         showStatus('Error exporting images', 'error');
     }
 }
 
-function cropImage(imageData) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const bbox = imageData.boundingBox;
-    canvas.width = bbox.w;
-    canvas.height = bbox.h;
-    ctx.drawImage(imageData.image, bbox.x, bbox.y, bbox.w, bbox.h, 0, 0, bbox.w, bbox.h);
-    return canvas;
+function warpQuadToCanvas(s) {
+    const cv = window.cv;
+    const [tl, tr, br, bl] = s.quad;
+    const widthTop = Math.hypot(tr.x - tl.x, tr.y - tl.y);
+    const widthBot = Math.hypot(br.x - bl.x, br.y - bl.y);
+    const heightL  = Math.hypot(bl.x - tl.x, bl.y - tl.y);
+    const heightR  = Math.hypot(br.x - tr.x, br.y - tr.y);
+    const W = Math.max(1, Math.round(Math.max(widthTop, widthBot)));
+    const H = Math.max(1, Math.round(Math.max(heightL, heightR)));
+
+    const tmp = document.createElement('canvas');
+    tmp.width = s.image.width;
+    tmp.height = s.image.height;
+    tmp.getContext('2d').drawImage(s.image, 0, 0);
+
+    const src = cv.imread(tmp);
+    const dst = new cv.Mat();
+    const srcPts = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+    const dstPts = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, W, 0, W, H, 0, H]);
+    const M = cv.getPerspectiveTransform(srcPts, dstPts);
+    cv.warpPerspective(src, dst, M, new cv.Size(W, H), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+    const out = document.createElement('canvas');
+    out.width = W;
+    out.height = H;
+    cv.imshow(out, dst);
+
+    src.delete(); dst.delete(); srcPts.delete(); dstPts.delete(); M.delete();
+    return out;
 }
 
 function downloadImage(canvas, filename) {
@@ -276,8 +326,6 @@ function downloadImage(canvas, filename) {
     link.click();
     document.body.removeChild(link);
 }
-
-function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 function showStatus(message, type = 'info') {
     const alert = document.getElementById('statusAlert');

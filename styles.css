@@ -58,6 +58,19 @@ canvas {
     max-width: 100%;
     height: auto;
     border-radius: 4px;
+    cursor: crosshair;
+    user-select: none;
+    touch-action: none;
+}
+
+canvas.dragging-corner {
+    cursor: grabbing;
+}
+
+.hint {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 8px;
 }
 
 .card {

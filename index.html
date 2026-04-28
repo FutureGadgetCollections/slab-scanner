@@ -60,29 +60,31 @@
         <div class="row mb-5" id="processingSection" style="display:none;">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
-                        <h5>Detected Card Outlines</h5>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Card Outlines</h5>
+                        <small class="text-muted">Click-drag corner-to-corner to draw a rectangle, then drag any corner to rotate or fine-tune.</small>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <h6>Front</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">Front</h6>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="clearQuad('front')">Clear rectangle</button>
+                                </div>
                                 <div id="frontCanvasContainer" class="canvas-container">
                                     <canvas id="frontCanvas"></canvas>
                                 </div>
-                                <div class="mt-2">
-                                    <label>Buffer (px):</label>
-                                    <input type="number" id="frontBuffer" value="10" min="0" class="form-control form-control-sm" onchange="reprocessImages()">
-                                </div>
                             </div>
                             <div class="col-md-6">
-                                <h6>Back</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">Back</h6>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="copyQuadFromFront()">Copy from front</button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearQuad('back')">Clear rectangle</button>
+                                    </div>
+                                </div>
                                 <div id="backCanvasContainer" class="canvas-container">
                                     <canvas id="backCanvas"></canvas>
-                                </div>
-                                <div class="mt-2">
-                                    <label>Buffer (px):</label>
-                                    <input type="number" id="backBuffer" value="10" min="0" class="form-control form-control-sm" onchange="reprocessImages()">
                                 </div>
                             </div>
                         </div>
