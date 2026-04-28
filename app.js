@@ -423,15 +423,26 @@ function saveCardsFromScan() {
         });
     }
     const count = state.front.rects.length;
+    const newCards = state.cards.slice(-count);
+
+    // Auto-advance to "upload next scan" mode: clear both images + rects so the
+    // upload section reappears as the box for the next batch
+    state.front.image = null;
+    state.back.image = null;
     state.front.rects = [];
     state.back.rects = [];
-    renderCanvas('front');
-    renderCanvas('back');
+    ['front', 'back'].forEach(side => {
+        document.getElementById(`${side}Input`).value = '';
+        document.getElementById(`${side}DropZone`).classList.remove('has-image');
+        document.getElementById(`${side}Image`).src = '';
+        const canvas = document.getElementById(`${side}Canvas`);
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    });
+
     renderSavedGrid();
     updateLayout();
-    showStatus(`Saved ${count} card${count > 1 ? 's' : ''} — scan barcodes or fill in metadata`, 'success');
-    // Best-effort auto-scan barcodes on the newly saved cards
-    state.cards.slice(-count).forEach(card => tryAutoScanBarcode(card));
+    showStatus(`Saved ${count} card${count > 1 ? 's' : ''} — drop the next front + back to continue`, 'success');
+    newCards.forEach(card => tryAutoScanBarcode(card));
 }
 
 function blankMetadata() {
@@ -578,7 +589,7 @@ const META_FIELDS = [
 
 function buildCardCell(card) {
     const col = document.createElement('div');
-    col.className = 'col-md-6 col-lg-4';
+    col.className = 'col-md-6 col-xxl-4';
     col.dataset.cardId = String(card.id);
 
     const fieldRows = META_FIELDS.map(f => `
