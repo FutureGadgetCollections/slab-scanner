@@ -52,23 +52,27 @@
             </div>
         </div>
 
-        <!-- Processing Section -->
-        <div class="row mb-5" id="processingSection" style="display:none;">
+        <!-- Marking Section -->
+        <div class="row mb-4" id="processingSection" style="display:none;">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Card Outlines</h5>
-                        <small class="text-muted">Click-drag corner-to-corner to draw a rectangle, then drag any corner to rotate or fine-tune.</small>
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h5 class="mb-0">Mark cards on this scan</h5>
+                            <small class="text-muted">Click-drag corner-to-corner on the front to mark each card. Right-click a rectangle to delete it. Adjust on the back as needed.</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearAllRects()">Clear rectangles</button>
+                            <button class="btn btn-success" onclick="saveCardsFromScan()">Save cards from this scan</button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="nextScan()">Next scan</button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                     <h6 class="mb-0">Front</h6>
-                                    <div>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('frontInput').click()">Change image</button>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearQuad('front')">Clear rectangle</button>
-                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('frontInput').click()">Change image</button>
                                 </div>
                                 <div id="frontCanvasContainer" class="canvas-container">
                                     <canvas id="frontCanvas"></canvas>
@@ -77,11 +81,7 @@
                             <div class="col-md-6">
                                 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                     <h6 class="mb-0">Back</h6>
-                                    <div>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('backInput').click()">Change image</button>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="copyQuadFromFront()">Copy from front</button>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="clearQuad('back')">Clear rectangle</button>
-                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('backInput').click()">Change image</button>
                                 </div>
                                 <div id="backCanvasContainer" class="canvas-container">
                                     <canvas id="backCanvas"></canvas>
@@ -93,24 +93,19 @@
             </div>
         </div>
 
-        <!-- Export Section -->
-        <div class="row" id="exportSection" style="display:none;">
+        <!-- Saved Cards Section -->
+        <div class="row mb-4" id="savedSection" style="display:none;">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
-                        <h5>Export</h5>
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0">Saved cards (<span id="savedCount">0</span>)</h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm" onclick="downloadAll()">Download all + CSV</button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="clearAllSaved()">Clear all</button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label for="exportName" class="form-label">Card Name/ID:</label>
-                            <input type="text" id="exportName" class="form-control" placeholder="e.g., PSA-001, Base-Charizard">
-                        </div>
-                        <div>
-                            <button class="btn btn-success" onclick="exportImages()">
-                                Export Front & Back
-                            </button>
-                            <small class="d-block mt-2 text-muted">Creates: [name]_front.jpg and [name]_back.jpg</small>
-                        </div>
+                        <div id="savedGrid" class="row g-3"></div>
                     </div>
                 </div>
             </div>
@@ -119,9 +114,6 @@
         <!-- Status Messages -->
         <div id="statusAlert" class="alert" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1000;"></div>
     </div>
-
-    <!-- OpenCV.js for contour-based card detection -->
-    <script async src="https://docs.opencv.org/4.x/opencv.js" onload="window.__cvReady = true"></script>
 
     <script src="app.js"></script>
 </body>

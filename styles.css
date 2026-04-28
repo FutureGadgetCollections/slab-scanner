@@ -77,6 +77,28 @@ h1 {
     box-shadow: 0 0 0 2px #0056b3;
 }
 
+/* Saved cards grid */
+.saved-card {
+    background-color: #fff;
+}
+
+.saved-card .thumb-wrap {
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.saved-thumb-img {
+    max-width: 100%;
+    max-height: 160px;
+    object-fit: contain;
+    border-radius: 2px;
+}
+
 .canvas-container {
     border: 1px solid #dee2e6;
     border-radius: 4px;
