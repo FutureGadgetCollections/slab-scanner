@@ -82,17 +82,21 @@ h1 {
     border-radius: 4px;
     background-color: #fff;
     padding: 10px;
-    max-height: 500px;
-    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 canvas {
     max-width: 100%;
+    max-height: 80vh;
+    width: auto;
     height: auto;
     border-radius: 4px;
     cursor: crosshair;
     user-select: none;
     touch-action: none;
+    display: block;
 }
 
 canvas.dragging-corner {
@@ -170,7 +174,7 @@ img {
         padding: 30px 15px;
     }
 
-    .canvas-container {
-        max-height: 300px;
+    canvas {
+        max-height: 70vh;
     }
 }
